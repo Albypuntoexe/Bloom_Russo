@@ -1,10 +1,10 @@
 package com.example.bloom_russo.ui
 
 import android.content.Context
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
@@ -12,26 +12,32 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.bloom_russo.R
 import java.time.LocalDate
 
-// Modelli per la lista
+// Classi dati necessarie per l'Adapter
 sealed class CalendarItem {
     data class Header(val text: String) : CalendarItem()
-    data class Day(
-        val date: LocalDate?, // Null se è uno spazio vuoto
-        val status: DayStatus
-    ) : CalendarItem()
+    data class Day(val date: LocalDate?, val status: DayStatus) : CalendarItem()
 }
 
 enum class DayStatus {
     NONE, PERIOD, PREDICTED_PERIOD, FERTILE, OVULATION
 }
 
-class CalendarAdapter(private val context: Context) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+class CalendarAdapter(
+    private val context: Context,
+    private val onDateClick: (LocalDate) -> Unit
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val items = mutableListOf<CalendarItem>()
+    private var selectedDate: LocalDate = LocalDate.now()
 
     fun submitList(newItems: List<CalendarItem>) {
         items.clear()
         items.addAll(newItems)
+        notifyDataSetChanged()
+    }
+
+    fun setSelectedDate(date: LocalDate) {
+        selectedDate = date
         notifyDataSetChanged()
     }
 
@@ -55,18 +61,17 @@ class CalendarAdapter(private val context: Context) : RecyclerView.Adapter<Recyc
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = items[position]) {
             is CalendarItem.Header -> (holder as HeaderViewHolder).bind(item)
-            is CalendarItem.Day -> (holder as DayViewHolder).bind(item, context)
+            is CalendarItem.Day -> (holder as DayViewHolder).bind(item, context, selectedDate, onDateClick)
         }
     }
 
     override fun getItemCount(): Int = items.size
 
-    // Configurazione per dire al GridManager che gli Header occupano 7 colonne
     val spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
         override fun getSpanSize(position: Int): Int {
             return when (items[position]) {
-                is CalendarItem.Header -> 7 // Occupa tutta la riga
-                is CalendarItem.Day -> 1    // Occupa 1 cella
+                is CalendarItem.Header -> 7
+                is CalendarItem.Day -> 1
             }
         }
     }
@@ -81,44 +86,64 @@ class CalendarAdapter(private val context: Context) : RecyclerView.Adapter<Recyc
     class DayViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val text: TextView = view.findViewById(R.id.dayText)
         private val bg: View = view.findViewById(R.id.dayBackground)
-        private val icon: View = view.findViewById(R.id.dayIcon)
+        private val iconFertile: ImageView = view.findViewById(R.id.iconFertile)
+        private val iconOvulation: ImageView = view.findViewById(R.id.iconOvulation)
+        private val selectionBorder: View = view.findViewById(R.id.selectionBorder)
 
-        fun bind(item: CalendarItem.Day, context: Context) {
+        fun bind(
+            item: CalendarItem.Day,
+            context: Context,
+            selectedDate: LocalDate,
+            onClickListener: (LocalDate) -> Unit
+        ) {
             if (item.date == null) {
                 text.text = ""
-                bg.backgroundTintList = null
-                icon.visibility = View.GONE
+                bg.setBackgroundColor(ContextCompat.getColor(context, android.R.color.transparent))
+                iconFertile.visibility = View.GONE
+                iconOvulation.visibility = View.GONE
+                selectionBorder.visibility = View.GONE
+                itemView.setOnClickListener(null)
                 return
             }
 
             text.text = item.date.dayOfMonth.toString()
 
-            // Reset colori
-            icon.visibility = View.GONE
+            // Reset visuale
+            iconFertile.visibility = View.GONE
+            iconOvulation.visibility = View.GONE
 
-            // Imposta colori in base allo status
-            val colorRes = when (item.status) {
-                DayStatus.PERIOD -> R.color.bloom_period
-                DayStatus.PREDICTED_PERIOD -> R.color.bloom_period_light
-                DayStatus.FERTILE -> R.color.bloom_fertile
-                DayStatus.OVULATION -> R.color.bloom_ovulation
-                DayStatus.NONE -> android.R.color.transparent
+            when (item.status) {
+                DayStatus.PERIOD -> {
+                    bg.setBackgroundColor(ContextCompat.getColor(context, R.color.bloom_period))
+                    bg.alpha = 1.0f
+                }
+                DayStatus.PREDICTED_PERIOD -> {
+                    bg.setBackgroundColor(ContextCompat.getColor(context, R.color.bloom_period_light))
+                    bg.alpha = 1.0f
+                }
+                DayStatus.FERTILE -> {
+                    bg.setBackgroundColor(ContextCompat.getColor(context, R.color.bloom_fertile))
+                    iconFertile.visibility = View.VISIBLE
+                    bg.alpha = 1.0f
+                }
+                DayStatus.OVULATION -> {
+                    bg.setBackgroundColor(ContextCompat.getColor(context, R.color.bloom_fertile))
+                    iconOvulation.visibility = View.VISIBLE
+                    bg.alpha = 1.0f
+                }
+                else -> {
+                    bg.setBackgroundColor(ContextCompat.getColor(context, android.R.color.transparent))
+                }
             }
 
-            // Colore di sfondo
-            if (item.status != DayStatus.NONE) {
-                bg.backgroundTintList = ContextCompat.getColorStateList(context, colorRes)
+            if (item.date == selectedDate) {
+                selectionBorder.visibility = View.VISIBLE
             } else {
-                bg.backgroundTintList = null
+                selectionBorder.visibility = View.GONE
             }
 
-            // Evidenzia "Oggi" con un bordo o testo bold (opzionale)
-            if (item.date == LocalDate.now()) {
-                text.setTypeface(null, android.graphics.Typeface.BOLD)
-                text.setTextColor(ContextCompat.getColor(context, R.color.bloom_primary))
-            } else {
-                text.setTypeface(null, android.graphics.Typeface.NORMAL)
-                text.setTextColor(Color.BLACK)
+            itemView.setOnClickListener {
+                onClickListener(item.date)
             }
         }
     }

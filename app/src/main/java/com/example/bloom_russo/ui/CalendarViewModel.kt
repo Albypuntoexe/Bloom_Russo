@@ -10,13 +10,22 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 class CalendarViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao = AppDatabase.getDatabase(application).userDao()
     val calendarItems = MutableLiveData<List<CalendarItem>>()
 
+    // Dati per il pannello inferiore (DataBinding)
+    val selectedDateText = MutableLiveData<String>()
+    val cycleDayText = MutableLiveData<String>()
+    val selectedDate = MutableLiveData<LocalDate>(LocalDate.now())
+
     init {
+        // Imposta testi iniziali
+        onDateSelected(LocalDate.now())
+
         viewModelScope.launch {
             val user = dao.getUserDataSync()
             if (user != null) {
@@ -25,34 +34,41 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun onDateSelected(date: LocalDate) {
+        selectedDate.value = date
+        // Formatta es. "Jan 13"
+        selectedDateText.value = date.format(DateTimeFormatter.ofPattern("MMM d"))
+
+        // Qui calcoleremmo il giorno del ciclo reale. Per ora mettiamo un placeholder o calcolo semplice
+        cycleDayText.value = "Cycle Day..."
+    }
+
     private fun generateCalendarData(user: UserCycleData) {
         val items = mutableListOf<CalendarItem>()
-        val startMonth = YearMonth.now().minusMonths(6) // Mostra 6 mesi passati
-        val endMonth = YearMonth.now().plusMonths(6)   // e 6 mesi futuri
+        val startMonth = YearMonth.now().minusMonths(6)
+        val endMonth = YearMonth.now().plusMonths(6)
 
-        val lastPeriodDate = LocalDate.parse(user.lastPeriodDate)
-
-        // Calcoliamo i cicli futuri previsti (approssimazione semplice)
-        // In una app reale, si userebbe una logica più complessa per i cicli passati
+        // Conversione sicura della data
+        val lastPeriodDate = try {
+            if (user.lastPeriodDate != null) LocalDate.parse(user.lastPeriodDate) else LocalDate.now()
+        } catch (e: Exception) { LocalDate.now() }
 
         var currentMonth = startMonth
         while (!currentMonth.isAfter(endMonth)) {
-            // 1. Aggiungi Header Mese
+            // Header
             items.add(CalendarItem.Header(currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy"))))
 
-            // 2. Calcola padding giorni (se il mese inizia di Mercoledì, servono 3 spazi vuoti)
-            // DayOfWeek value: 1 (Mon) -> 7 (Sun). Se vogliamo che Sun sia la prima colonna (come nel layout xml), dobbiamo adattare.
-            // Nel layout XML ho messo Sun come primo. Sun=7.
-            val firstDayOfWeek = currentMonth.atDay(1).dayOfWeek.value // 1=Mon, .. 7=Sun
-            // Se Sun(7) è il primo, e il mese inizia Mon(1), serve 1 spazio.
-            // Se il mese inizia Sun(7), servono 0 spazi.
+            // Padding giorni vuoti
+            val firstDayOfWeek = currentMonth.atDay(1).dayOfWeek.value // 1=Mon, 7=Sun
+            // Adattamento per layout che inizia con Domenica (Sun)
+            // Se Sun(7) -> 0 spazi. Se Mon(1) -> 1 spazio.
             val emptySlots = if (firstDayOfWeek == 7) 0 else firstDayOfWeek
 
             for (i in 0 until emptySlots) {
                 items.add(CalendarItem.Day(null, DayStatus.NONE))
             }
 
-            // 3. Aggiungi i giorni del mese
+            // Giorni
             val daysInMonth = currentMonth.lengthOfMonth()
             for (day in 1..daysInMonth) {
                 val date = currentMonth.atDay(day)
@@ -62,34 +78,21 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
 
             currentMonth = currentMonth.plusMonths(1)
         }
-
         calendarItems.postValue(items)
     }
 
     private fun calculateDayStatus(date: LocalDate, lastPeriod: LocalDate, cycleLen: Int, periodLen: Int): DayStatus {
-        // Calcolo giorni trascorsi dall'ultimo ciclo noto
-        val daysDiff = java.time.temporal.ChronoUnit.DAYS.between(lastPeriod, date)
-
-        // Se è nel passato prima dell'ultimo ciclo registrato, ignoriamo per semplicità
+        val daysDiff = ChronoUnit.DAYS.between(lastPeriod, date)
         if (daysDiff < 0) return DayStatus.NONE
 
-        // Calcoliamo la posizione relativa all'interno di un ciclo teorico
         val cycleDay = (daysDiff % cycleLen).toInt()
-        // cycleDay va da 0 a 27 (se ciclo di 28gg)
 
         return when {
-            // Giorni di mestruazioni (es. giorno 0, 1, 2, 3)
             cycleDay < periodLen -> {
-                // Se la data è nel futuro, è una previsione
                 if (date.isAfter(LocalDate.now())) DayStatus.PREDICTED_PERIOD else DayStatus.PERIOD
             }
-            // Ovulazione (circa 14 giorni prima della fine del ciclo)
-            // In un ciclo di 28gg, ovulazione al giorno 14 (indice 13)
             cycleDay == (cycleLen - 14) -> DayStatus.OVULATION
-
-            // Finestra fertile (5 giorni prima dell'ovulazione)
             cycleDay >= (cycleLen - 19) && cycleDay < (cycleLen - 14) -> DayStatus.FERTILE
-
             else -> DayStatus.NONE
         }
     }

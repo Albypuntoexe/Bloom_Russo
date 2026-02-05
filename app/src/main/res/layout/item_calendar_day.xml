@@ -3,15 +3,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="4dp">
-
+    android:layout_height="60dp"
+    android:background="@color/white">
     <View
         android:id="@+id/dayBackground"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:background="@drawable/bg_rounded_button"
-        android:backgroundTint="@android:color/transparent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_margin="1dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -21,22 +19,44 @@
         android:id="@+id/dayText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        tools:text="15"
-        android:textSize="16sp"
+        tools:text="13"
+        android:textSize="18sp"
+        android:textStyle="bold"
         android:textColor="@color/black"
-        app:layout_constraintBottom_toBottomOf="@+id/dayBackground"
-        app:layout_constraintEnd_toEndOf="@+id/dayBackground"
-        app:layout_constraintStart_toStartOf="@+id/dayBackground"
-        app:layout_constraintTop_toTopOf="@+id/dayBackground" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="8dp"/>
 
     <ImageView
-        android:id="@+id/dayIcon"
+        android:id="@+id/iconFertile"
         android:layout_width="12dp"
         android:layout_height="12dp"
-        app:layout_constraintTop_toTopOf="@id/dayBackground"
-        app:layout_constraintEnd_toEndOf="@id/dayBackground"
-        android:src="@android:drawable/ic_menu_my_calendar"
+        android:src="@drawable/ic_leaf"
+        android:layout_margin="4dp"
         android:visibility="gone"
-        app:tint="@color/bloom_primary" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <ImageView
+        android:id="@+id/iconOvulation"
+        android:layout_width="12dp"
+        android:layout_height="12dp"
+        android:src="@drawable/ic_egg"
+        android:layout_margin="4dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <View
+        android:id="@+id/selectionBorder"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/bg_day_selection"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

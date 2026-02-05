@@ -42,4 +42,16 @@
         android:name="com.example.bloom_russo.ui.HomeFragment"
         android:label="HomeFragment"
         tools:layout="@layout/fragment_home"/>
+
+    <fragment
+        android:id="@+id/calendarFragment"
+        android:name="com.example.bloom_russo.ui.CalendarFragment"
+        android:label="CalendarFragment"
+        tools:layout="@layout/fragment_calendar"/>
+
+    <fragment
+        android:id="@+id/analysisFragment"
+        android:name="com.example.bloom_russo.ui.AnalysisFragment"
+        android:label="AnalysisFragment" />
+
 </navigation>

@@ -8,4 +8,12 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <color name="bloom_primary">#FF4081</color> <color name="bloom_period">#FF80AB</color> <color name="bloom_period_light">#FFCDD2</color> <color name="bloom_fertile">#FFF176</color> <color name="bloom_ovulation">#FFD54F</color> <color name="bloom_bg">#FCE4EC</color> </resources>
+    <color name="bloom_primary">#FF4081</color>
+    <color name="bloom_period">#FF8A80</color> <color name="bloom_period_light">#FFCDD2</color> <color name="bloom_fertile">#FFF59D</color>
+    <color name="bloom_ovulation">#FFD54F</color>
+    <color name="bloom_bg">#FCE4EC</color>
+
+    <color name="selection_border">#6200EE</color>
+    <color name="icon_leaf">#64DD17</color>
+    <color name="icon_egg">#FFAB00</color>
+</resources>
