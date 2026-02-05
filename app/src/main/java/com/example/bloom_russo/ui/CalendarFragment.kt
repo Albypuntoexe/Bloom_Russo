@@ -4,10 +4,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
+import com.example.bloom_russo.R
 import com.example.bloom_russo.databinding.FragmentCalendarBinding
 
 class CalendarFragment : Fragment() {
@@ -23,9 +24,7 @@ class CalendarFragment : Fragment() {
         binding.lifecycleOwner = viewLifecycleOwner
 
         val adapter = CalendarAdapter(requireContext()) { date ->
-            // Callback al click sulla data
             viewModel.onDateSelected(date)
-            // Aggiorna la selezione visiva (bordo viola)
             (binding.calendarRecyclerView.adapter as CalendarAdapter).setSelectedDate(date)
         }
 
@@ -37,13 +36,12 @@ class CalendarFragment : Fragment() {
 
         viewModel.calendarItems.observe(viewLifecycleOwner) { items ->
             adapter.submitList(items)
-            // Scrolla al centro della lista (dove c'è il mese corrente)
             binding.calendarRecyclerView.scrollToPosition(items.size / 2)
         }
 
         binding.btnEdit.setOnClickListener {
-            // Qui andrà la navigazione verso Edit Period
-            Toast.makeText(context, "Go to Edit Period", Toast.LENGTH_SHORT).show()
+            // Naviga verso Edit Period
+            findNavController().navigate(R.id.action_calendar_to_edit)
         }
 
         return binding.root

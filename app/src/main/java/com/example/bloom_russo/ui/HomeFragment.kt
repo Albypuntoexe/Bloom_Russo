@@ -7,6 +7,8 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import com.example.bloom_russo.R
 import com.example.bloom_russo.databinding.FragmentHomeBinding
 
 class HomeFragment : Fragment() {
@@ -21,18 +23,16 @@ class HomeFragment : Fragment() {
 
         // Collega il ViewModel al Layout
         binding.viewModel = viewModel
-        // Importante per far funzionare il LiveData nel layout
         binding.lifecycleOwner = viewLifecycleOwner
 
         // Attiviamo l'osservatore dei dati
         viewModel.dataObserver.observe(viewLifecycleOwner) {
-            // I dati sono stati caricati, la UI si aggiorna automaticamente grazie al DataBinding
+            // UI si aggiorna via DataBinding
         }
 
         binding.actionButton.setOnClickListener {
-            // Qui implementeremo la logica per aprire EditPeriod (Image 5.png)
-            // Per ora mettiamo un Toast
-            Toast.makeText(context, "Open Edit Period Screen", Toast.LENGTH_SHORT).show()
+            // Ora l'ID action_home_to_edit esiste grazie al file nav_graph sopra
+            findNavController().navigate(R.id.action_home_to_edit)
         }
 
         return binding.root
