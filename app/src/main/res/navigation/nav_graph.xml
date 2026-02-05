@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/onboardingPeriodFragment">
+
+    <fragment
+        android:id="@+id/onboardingPeriodFragment"
+        android:name="com.example.bloom_russo.ui.OnboardingPeriodFragment"
+        android:label="OnboardingPeriodFragment"
+        tools:layout="@layout/fragment_onboarding_period">
+        <action
+            android:id="@+id/action_period_to_cycle"
+            app:destination="@id/onboardingCycleFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/onboardingCycleFragment"
+        android:name="com.example.bloom_russo.ui.OnboardingCycleFragment"
+        android:label="OnboardingCycleFragment"
+        tools:layout="@layout/fragment_onboarding_cycle">
+        <action
+            android:id="@+id/action_cycle_to_date"
+            app:destination="@id/onboardingDateFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/onboardingDateFragment"
+        android:name="com.example.bloom_russo.ui.OnboardingDateFragment"
+        android:label="OnboardingDateFragment"
+        tools:layout="@layout/fragment_onboarding_date">
+        <action
+            android:id="@+id/action_date_to_home"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/onboardingPeriodFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.example.bloom_russo.ui.HomeFragment"
+        android:label="HomeFragment"
+        tools:layout="@layout/fragment_home"/>
+</navigation>

@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Bloom_Russo</string>
+    <string name="onboarding_period_question">How many days does your period usually last?</string>
+    <string name="onboarding_cycle_question">How many days does your cycle usually last?</string>
+    <string name="onboarding_date_question">Start of your last cycle</string>
+    <string name="i_dont_know">I don\'t know</string>
+    <string name="next">Next</string>
+    <string name="done">Done</string>
+    <string name="days">Days</string>
+    <string name="home_title">Home</string>
 </resources>
