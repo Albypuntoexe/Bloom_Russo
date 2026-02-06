@@ -60,25 +60,27 @@
     <fragment
         android:id="@+id/analysisFragment"
         android:name="com.example.bloom_russo.ui.AnalysisFragment"
-        android:label="AnalysisFragment" />
+        android:label="AnalysisFragment"
+        tools:layout="@layout/fragment_analysis">
+
+        <action
+            android:id="@+id/action_analysis_to_myCycles"
+            app:destination="@id/myCyclesFragment" />
+
+        <action
+            android:id="@+id/action_analysis_to_reminders"
+            app:destination="@id/remindersFragment" />
+
+        <action
+            android:id="@+id/action_analysis_to_settings"
+            app:destination="@id/settingsFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/editPeriodFragment"
         android:name="com.example.bloom_russo.ui.EditPeriodFragment"
         android:label="EditPeriodFragment"
         tools:layout="@layout/fragment_edit_period"/>
-    <fragment
-        android:id="@+id/analysisFragment"
-        android:name="com.example.bloom_russo.ui.AnalysisFragment"
-        android:label="AnalysisFragment"
-        tools:layout="@layout/fragment_analysis">
-        <action
-            android:id="@+id/action_analysis_to_myCycles"
-            app:destination="@id/myCyclesFragment" />
-        <action
-            android:id="@+id/action_analysis_to_reminders"
-            app:destination="@id/remindersFragment" />
-    </fragment>
 
     <fragment
         android:id="@+id/myCyclesFragment"
@@ -91,5 +93,11 @@
         android:name="com.example.bloom_russo.ui.RemindersFragment"
         android:label="RemindersFragment"
         tools:layout="@layout/fragment_reminders"/>
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.example.bloom_russo.ui.SettingsFragment"
+        android:label="SettingsFragment"
+        tools:layout="@layout/fragment_settings"/>
 
 </navigation>

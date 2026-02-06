@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import com.example.bloom_russo.data.AppDatabase
 import com.example.bloom_russo.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -19,11 +20,26 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
+        val navGraph = navController.navInflater.inflate(R.navigation.nav_graph)
 
-        // Collega la BottomNav al Navigation Controller
+        // LOGICA AVVIO: Controlla se l'utente esiste già nel DB
+        val db = AppDatabase.getDatabase(this)
+        val existingUser = db.userDao().getUserDataSync()
+
+        if (existingUser != null) {
+            // Utente esiste -> Vai alla HOME
+            navGraph.setStartDestination(R.id.homeFragment)
+        } else {
+            // Utente nuovo -> Vai all'ONBOARDING
+            navGraph.setStartDestination(R.id.onboardingPeriodFragment)
+        }
+
+        // Applica il grafo modificato
+        navController.graph = navGraph
+
         binding.bottomNavigation.setupWithNavController(navController)
 
-        // Nascondi la BottomNav durante l'Onboarding
+        // Nascondi BottomBar durante onboarding
         navController.addOnDestinationChangedListener { _, destination, _ ->
             if (destination.id == R.id.onboardingPeriodFragment ||
                 destination.id == R.id.onboardingCycleFragment ||

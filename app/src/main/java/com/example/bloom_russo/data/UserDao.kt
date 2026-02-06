@@ -11,31 +11,35 @@ import androidx.room.Update
 @Dao
 interface UserDao {
 
-    // --- Gestione Dati Utente Principali (UserCycleData) ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(data: UserCycleData)
+
+    @Update
+    suspend fun update(data: UserCycleData)
 
     @Query("SELECT * FROM user_cycle_data LIMIT 1")
     fun getUserData(): LiveData<UserCycleData?>
 
+    // FIX: Rimossa la parola "suspend".
+    // Dato che usiamo allowMainThreadQueries(), possiamo chiamarla direttamente in MainActivity.
     @Query("SELECT * FROM user_cycle_data LIMIT 1")
-    suspend fun getUserDataSync(): UserCycleData?
+    fun getUserDataSync(): UserCycleData?
 
-    // --- NUOVO: Gestione Giorni Singoli (PeriodDay) ---
+    // --- Gestione Cancellazione Totale ---
+    @Query("DELETE FROM user_cycle_data")
+    suspend fun deleteAllUserData()
 
-    // Inserisce un giorno come "giorno di mestruazioni"
-    @Insert(onConflict = OnConflictStrategy.IGNORE) // IGNORE: se c'è già, non fare nulla
+    // --- Period Days ---
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertPeriodDay(day: PeriodDay)
 
-    // Rimuove un giorno (quando l'utente toglie la spunta)
     @Delete
     suspend fun deletePeriodDay(day: PeriodDay)
 
-    // Ottiene tutti i giorni di mestruazioni salvati nel DB
     @Query("SELECT * FROM period_days")
     suspend fun getAllPeriodDays(): List<PeriodDay>
 
-    // Verifica se un giorno specifico è segnato come mestruazione (utile per il calendario)
-    @Query("SELECT EXISTS(SELECT 1 FROM period_days WHERE date = :dateStr)")
-    suspend fun isPeriodDay(dateStr: String): Boolean
+    @Query("DELETE FROM period_days")
+    suspend fun deleteAllPeriodDays()
 }
