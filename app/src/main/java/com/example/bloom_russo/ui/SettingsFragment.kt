@@ -3,13 +3,12 @@ package com.example.bloom_russo.ui
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
-import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.NumberPicker // IMPORTANTE
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -29,25 +28,20 @@ class SettingsFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         val view = inflater.inflate(R.layout.fragment_settings, container, false)
-        // Inizializza DAO
         dao = AppDatabase.getDatabase(requireContext()).userDao()
 
-        // Back Button
         view.findViewById<ImageView>(R.id.btnBack).setOnClickListener {
             findNavController().popBackStack()
         }
 
-        // Edit Period Duration
         view.findViewById<LinearLayout>(R.id.btnEditPeriodDuration).setOnClickListener {
-            showEditDialog("Period Duration", true)
+            showNumberPickerDialog("Period Duration", true)
         }
 
-        // Edit Cycle Length
         view.findViewById<LinearLayout>(R.id.btnEditCycleLength).setOnClickListener {
-            showEditDialog("Cycle Length", false)
+            showNumberPickerDialog("Cycle Length", false)
         }
 
-        // Delete All Data
         view.findViewById<TextView>(R.id.btnDeleteAll).setOnClickListener {
             showDeleteConfirmation()
         }
@@ -55,25 +49,45 @@ class SettingsFragment : Fragment() {
         return view
     }
 
-    private fun showEditDialog(title: String, isPeriod: Boolean) {
+    private fun showNumberPickerDialog(title: String, isPeriod: Boolean) {
         val builder = AlertDialog.Builder(requireContext())
         builder.setTitle(title)
 
-        val input = EditText(requireContext())
-        input.inputType = InputType.TYPE_CLASS_NUMBER
-        builder.setView(input)
+        // Creiamo il NumberPicker
+        val numberPicker = NumberPicker(requireContext())
+
+        // Impostiamo range sensati
+        if (isPeriod) {
+            numberPicker.minValue = 1
+            numberPicker.maxValue = 15
+            numberPicker.value = 5 // Default visuale
+        } else {
+            numberPicker.minValue = 15
+            numberPicker.maxValue = 50
+            numberPicker.value = 28 // Default visuale
+        }
+
+        // Recuperiamo il valore corrente dal DB per mostrarlo (opzionale ma carino)
+        lifecycleScope.launch {
+            val user = dao.getUserDataSync()
+            if (user != null) {
+                if (isPeriod) numberPicker.value = user.periodDuration
+                else numberPicker.value = user.cycleLength
+            }
+        }
+
+        // Aggiungiamo il picker al dialog
+        builder.setView(numberPicker)
 
         builder.setPositiveButton("Save") { _, _ ->
-            val value = input.text.toString().toIntOrNull()
-            if (value != null && value > 0) {
-                lifecycleScope.launch {
-                    val user = dao.getUserDataSync()
-                    if (user != null) {
-                        if (isPeriod) user.periodDuration = value
-                        else user.cycleLength = value
-                        dao.insertOrUpdate(user)
-                        Toast.makeText(context, "Updated!", Toast.LENGTH_SHORT).show()
-                    }
+            val value = numberPicker.value
+            lifecycleScope.launch {
+                val user = dao.getUserDataSync()
+                if (user != null) {
+                    if (isPeriod) user.periodDuration = value
+                    else user.cycleLength = value
+                    dao.insertOrUpdate(user)
+                    Toast.makeText(context, "Updated to $value days!", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -94,11 +108,8 @@ class SettingsFragment : Fragment() {
 
     private fun performDelete() {
         lifecycleScope.launch {
-            // Nuke tables
             dao.deleteAllUserData()
             dao.deleteAllPeriodDays()
-
-            // Riavvia l'app
             val intent = Intent(requireContext(), MainActivity::class.java)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
             startActivity(intent)

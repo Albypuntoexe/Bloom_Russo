@@ -59,9 +59,9 @@
         </LinearLayout>
 
         <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchStart"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:checked="true"/>
+            android:layout_height="wrap_content"/>
     </LinearLayout>
 
     <View
@@ -98,9 +98,9 @@
         </LinearLayout>
 
         <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchEnd"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:checked="false"/>
+            android:layout_height="wrap_content"/>
     </LinearLayout>
 
 </LinearLayout>

@@ -22,15 +22,12 @@ class HomeFragment : Fragment() {
         binding.viewModel = viewModel
         binding.lifecycleOwner = viewLifecycleOwner
 
-        // Observer per i dati (attiva il calcolo iniziale)
         viewModel.dataObserver.observe(viewLifecycleOwner) {}
 
-        // Click Bottone Centrale
         binding.actionButton.setOnClickListener {
             viewModel.onActionButtonClick()
         }
 
-        // Navigazione verso Edit (controllata dal ViewModel)
         viewModel.navigateToEdit.observe(viewLifecycleOwner) { shouldNavigate ->
             if (shouldNavigate) {
                 findNavController().navigate(R.id.action_home_to_edit)
@@ -38,9 +35,13 @@ class HomeFragment : Fragment() {
             }
         }
 
-        // FIX: Click Icona Profilo -> Settings
-        // Ora usiamo il binding sicuro
-        binding.profileImage.setOnClickListener {
+        // Click Campanella -> Reminders
+        binding.iconNotifications.setOnClickListener {
+            findNavController().navigate(R.id.action_home_to_reminders)
+        }
+
+        // Click Ingranaggio -> Settings
+        binding.iconSettings.setOnClickListener {
             findNavController().navigate(R.id.action_home_to_settings)
         }
 
