@@ -25,17 +25,23 @@ class HomeFragment : Fragment() {
         // Observer per i dati (attiva il calcolo iniziale)
         viewModel.dataObserver.observe(viewLifecycleOwner) {}
 
-        // Listener Click Bottone
+        // Click Bottone Centrale
         binding.actionButton.setOnClickListener {
             viewModel.onActionButtonClick()
         }
 
-        // Navigazione controllata dal ViewModel
+        // Navigazione verso Edit (controllata dal ViewModel)
         viewModel.navigateToEdit.observe(viewLifecycleOwner) { shouldNavigate ->
             if (shouldNavigate) {
                 findNavController().navigate(R.id.action_home_to_edit)
                 viewModel.onNavigationComplete()
             }
+        }
+
+        // FIX: Click Icona Profilo -> Settings
+        // Ora usiamo il binding sicuro
+        binding.profileImage.setOnClickListener {
+            findNavController().navigate(R.id.action_home_to_settings)
         }
 
         return binding.root

@@ -45,6 +45,9 @@
         <action
             android:id="@+id/action_home_to_edit"
             app:destination="@id/editPeriodFragment" />
+        <action
+            android:id="@+id/action_home_to_settings"
+            app:destination="@id/settingsFragment" />
     </fragment>
 
     <fragment
