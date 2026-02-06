@@ -25,12 +25,9 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
     val selectedDate = MutableLiveData<LocalDate>(LocalDate.now())
 
     private var currentUser: UserCycleData? = null
-
-    // Set veloce per controllare se un giorno è di flusso (Period)
     private var periodDaysSet = setOf<String>()
-
-    // Lista ordinata delle DATE DI INIZIO ciclo reali
     private var cycleStartDates = listOf<LocalDate>()
+    private var lastRecordedDate: LocalDate = LocalDate.MIN
 
     init {
         viewModelScope.launch { loadDataAndGenerateCalendar() }
@@ -44,19 +41,20 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         currentUser = dao.getUserDataSync()
         val dbDays = dao.getAllPeriodDays()
 
-        // 1. Cache dei giorni di flusso (per colorare di rosa)
         periodDaysSet = dbDays.map { it.date }.toSet()
+        if (dbDays.isNotEmpty()) {
+            lastRecordedDate = dbDays.map { LocalDate.parse(it.date) }.maxOrNull() ?: LocalDate.MIN
+        } else {
+            lastRecordedDate = LocalDate.MIN
+        }
 
-        // 2. Troviamo le date di INIZIO ciclo reali
-        // Un giorno è "inizio" se il giorno prima NON era mestruazione
         val sortedDays = dbDays.map { LocalDate.parse(it.date) }.sorted()
         val starts = mutableListOf<LocalDate>()
         if (sortedDays.isNotEmpty()) {
-            starts.add(sortedDays[0]) // Il primo in assoluto è un inizio
+            starts.add(sortedDays[0])
             for (i in 1 until sortedDays.size) {
                 val current = sortedDays[i]
                 val prev = sortedDays[i-1]
-                // Se c'è un buco > 1 giorno, 'current' è un nuovo inizio
                 if (ChronoUnit.DAYS.between(prev, current) > 1) {
                     starts.add(current)
                 }
@@ -79,12 +77,9 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             return
         }
 
-        // Calcoliamo lo status esatto per il testo in basso
         val status = calculateDayStatus(date)
 
-        // Se è un giorno di flusso reale
         if (periodDaysSet.contains(date.toString())) {
-            // Cerchiamo l'inizio di QUESTO ciclo specifico per dire "Giorno X"
             val anchorDate = findAnchorDate(date)
             if (anchorDate != null) {
                 val dayIndex = ChronoUnit.DAYS.between(anchorDate, date).toInt() + 1
@@ -97,7 +92,6 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             return
         }
 
-        // Se non è flusso, vediamo se è fertile/ovulazione
         when (status) {
             DayStatus.OVULATION -> {
                 fertilityText.value = "HIGH - Ovulation Day"
@@ -128,26 +122,31 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // Trova la data di inizio ciclo che "governa" la data target
     private fun findAnchorDate(targetDate: LocalDate): LocalDate? {
         val user = currentUser ?: return null
 
-        // 1. Cerca l'ultimo inizio REALE avvenuto prima o durante la targetDate
         val lastRealStart = cycleStartDates.lastOrNull { !it.isAfter(targetDate) }
 
         if (lastRealStart != null) {
-            // Se siamo entro una lunghezza ragionevole (es. ciclo + 10 giorni), usiamo questo
             val daysDiff = ChronoUnit.DAYS.between(lastRealStart, targetDate)
-            if (daysDiff < (user.cycleLength + 10)) {
+
+            // FIX CRUCIALE: Rimosso il "+ 10". Ora lo switch è matematico preciso.
+            // Se superi la lunghezza del ciclo, proiettiamo subito il nuovo ciclo.
+            if (daysDiff < user.cycleLength) {
                 return lastRealStart
             }
 
-            // Se siamo molto avanti nel futuro rispetto all'ultimo dato reale,
-            // proiettiamo in avanti (Future Prediction)
-            if (targetDate.isAfter(LocalDate.now())) {
-                // Calcoliamo quanti cicli sono passati teoricamente
+            if (targetDate.isAfter(lastRealStart)) {
                 val cyclesPassed = (daysDiff / user.cycleLength)
                 return lastRealStart.plusDays(cyclesPassed * user.cycleLength.toLong())
+            }
+        }
+        else if (cycleStartDates.isNotEmpty()) {
+            val absoluteLast = cycleStartDates.last()
+            if (targetDate.isAfter(absoluteLast)) {
+                val daysDiff = ChronoUnit.DAYS.between(absoluteLast, targetDate)
+                val cyclesPassed = (daysDiff / user.cycleLength)
+                return absoluteLast.plusDays(cyclesPassed * user.cycleLength.toLong())
             }
         }
 
@@ -188,12 +187,9 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun calculateDayStatus(date: LocalDate): DayStatus {
-        // 1. REALTÀ
         if (periodDaysSet.contains(date.toString())) return DayStatus.PERIOD
 
         val user = currentUser ?: return DayStatus.NONE
-
-        // 2. Trova l'ancora (Start Date) per questo giorno
         val anchorDate = findAnchorDate(date) ?: return DayStatus.NONE
 
         val dayIndex = ChronoUnit.DAYS.between(anchorDate, date).toInt()
@@ -201,12 +197,10 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         val ovulationIndex = user.cycleLength - 14
         val fertileStartIndex = user.cycleLength - 19
 
-        // Logica Fertilità
         if (dayIndex == ovulationIndex) return DayStatus.OVULATION
         if (dayIndex >= fertileStartIndex && dayIndex < ovulationIndex) return DayStatus.FERTILE
 
-        // Previsione Periodo Futuro
-        if (date.isAfter(LocalDate.now()) && dayIndex < user.periodDuration) {
+        if (date.isAfter(lastRecordedDate) && dayIndex < user.periodDuration) {
             return DayStatus.PREDICTED_PERIOD
         }
 
