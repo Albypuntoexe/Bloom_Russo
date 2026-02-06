@@ -18,14 +18,11 @@ class HomeFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // Inizializza il Binding
         val binding = FragmentHomeBinding.inflate(inflater, container, false)
-
-        // Collega il ViewModel al layout XML
         binding.viewModel = viewModel
         binding.lifecycleOwner = viewLifecycleOwner
 
-        // Observer per i dati (attiva il calcolo iniziale)
+        // Observer per i dati
         viewModel.dataObserver.observe(viewLifecycleOwner) {}
 
         // Click Bottone Centrale
@@ -33,7 +30,7 @@ class HomeFragment : Fragment() {
             viewModel.onActionButtonClick()
         }
 
-        // Navigazione verso Edit (controllata dal ViewModel)
+        // Navigazione
         viewModel.navigateToEdit.observe(viewLifecycleOwner) { shouldNavigate ->
             if (shouldNavigate) {
                 findNavController().navigate(R.id.action_home_to_edit)
@@ -41,17 +38,35 @@ class HomeFragment : Fragment() {
             }
         }
 
-        // Click Campanella (Notifiche)
+        // Click Icone Header
         binding.iconNotifications.setOnClickListener {
             findNavController().navigate(R.id.action_home_to_reminders)
         }
-
-        // Click Settings (Ingranaggio)
         binding.iconSettings.setOnClickListener {
             findNavController().navigate(R.id.action_home_to_settings)
         }
 
-        // IMPORTANTE: Restituisce la View radice, non un File!
+        // --- LOGICA SWITCH GATTO/CANE ---
+        // Imposta lo stato iniziale
+        binding.petImage.setImageResource(R.drawable.gatto)
+        binding.petSwitch.isChecked = false
+        binding.petSwitch.text = "Switch to Dog"
+
+        // Listener per il cambio di stato dello Switch
+        binding.petSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                // Switch attivo -> Mostra Cane
+                // Assicurati di avere 'cane.png' nella cartella drawable
+                binding.petImage.setImageResource(R.drawable.cane)
+                binding.petSwitch.text = "Switch to Cat"
+            } else {
+                // Switch disattivo -> Mostra Gatto
+                binding.petImage.setImageResource(R.drawable.gatto)
+                binding.petSwitch.text = "Switch to Dog"
+            }
+        }
+        // --------------------------------
+
         return binding.root
     }
 }
