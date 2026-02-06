@@ -35,7 +35,7 @@ class MyCyclesAdapter : RecyclerView.Adapter<MyCyclesAdapter.ViewHolder>() {
 
         fun bind(item: CycleHistoryItem) {
             dateRange.text = "${item.startDate} - ${item.endDate}"
-            duration.text = "${item.duration} days"
+            duration.text = "${item.duration} Days" // Aggiunta parola "Days"
             year.text = item.year.toString()
         }
     }

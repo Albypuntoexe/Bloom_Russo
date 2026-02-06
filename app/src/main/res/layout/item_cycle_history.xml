@@ -1,17 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="16dp"
-    android:background="@drawable/bg_bottom_border">
+    android:background="@color/white"
+    android:paddingStart="24dp"
+    android:paddingTop="16dp"
+    android:paddingEnd="24dp"
+    android:paddingBottom="16dp">
 
     <TextView
         android:id="@+id/tvDateRange"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Feb 6 - Feb 10"
-        android:textSize="16sp"
+        tools:text="Jan 9 - Jan 13"
+        android:textSize="18sp"
         android:textColor="@color/black"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
@@ -21,9 +25,10 @@
         android:id="@+id/tvYear"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="2026"
-        android:textSize="12sp"
+        tools:text="2026"
+        android:textSize="14sp"
         android:textColor="@color/gray_icon"
+        android:layout_marginTop="4dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvDateRange" />
 
@@ -31,12 +36,21 @@
         android:id="@+id/tvDuration"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="5 days"
+        tools:text="5 Days"
         android:textSize="16sp"
         android:textColor="@color/bloom_primary"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#F0F0F0"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/tvYear"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
