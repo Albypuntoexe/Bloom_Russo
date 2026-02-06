@@ -16,4 +16,5 @@
     <color name="selection_border">#6200EE</color>
     <color name="icon_leaf">#64DD17</color>
     <color name="icon_egg">#FFAB00</color>
+    <color name="gray_icon">#757575</color>
 </resources>
