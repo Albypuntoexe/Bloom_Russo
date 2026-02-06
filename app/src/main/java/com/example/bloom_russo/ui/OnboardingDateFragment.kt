@@ -9,7 +9,6 @@ import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import com.example.bloom_russo.R
 import com.example.bloom_russo.databinding.FragmentOnboardingDateBinding
-import java.util.Calendar
 
 class OnboardingDateFragment : Fragment() {
 
@@ -22,31 +21,33 @@ class OnboardingDateFragment : Fragment() {
     ): View {
         binding = FragmentOnboardingDateBinding.inflate(inflater, container, false)
 
+        // Impostiamo la data di default a oggi nel ViewModel appena si apre la schermata
+        // Così se l'utente preme "Done" senza toccare lo spinner, salva oggi.
+        viewModel.setDateToToday()
+
         binding.btnDone.setOnClickListener {
             // Prende data dal DatePicker
             val day = binding.datePicker.dayOfMonth
-            val month = binding.datePicker.month + 1 // I mesi in Android partono da 0
+            val month = binding.datePicker.month + 1
             val year = binding.datePicker.year
 
-            // Formattiamo "yyyy-MM-dd"
             val formattedDate = String.format("%04d-%02d-%02d", year, month, day)
             viewModel.lastPeriodDate = formattedDate
 
-            completeOnboarding()
+            // False = Non ho saltato, salva i dati veri
+            completeOnboarding(isSkipped = false)
         }
 
         binding.btnSkip.setOnClickListener {
-            // Lascia la data di oggi (impostata nel ViewModel)
-            completeOnboarding()
+            // True = Ho saltato, salva NULL e non generare giorni
+            completeOnboarding(isSkipped = true)
         }
 
         return binding.root
     }
 
-    private fun completeOnboarding() {
-        // Salva tutto nel DB
-        viewModel.saveData()
-        // Naviga alla Home
+    private fun completeOnboarding(isSkipped: Boolean) {
+        viewModel.saveData(isSkipped)
         findNavController().navigate(R.id.action_date_to_home)
     }
 }

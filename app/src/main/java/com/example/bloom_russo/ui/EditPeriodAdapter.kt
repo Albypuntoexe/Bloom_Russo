@@ -18,7 +18,6 @@ class EditPeriodAdapter(
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val items = mutableListOf<CalendarItem>()
-    // Set di stringhe date (YYYY-MM-DD) che sono selezionate
     private val selectedDates = mutableSetOf<String>()
 
     fun submitList(newItems: List<CalendarItem>, newSelections: Set<String>) {
@@ -93,7 +92,18 @@ class EditPeriodAdapter(
 
             text.text = item.date.dayOfMonth.toString()
 
-            val dateStr = item.date.toString() // YYYY-MM-DD
+            // Date Future: Disabilitate
+            if (item.date.isAfter(LocalDate.now())) {
+                text.setTextColor(Color.LTGRAY)
+                bgSelected.visibility = View.GONE
+                bgUnselected.visibility = View.GONE
+                checkIcon.visibility = View.GONE
+                itemView.setOnClickListener(null)
+                return
+            }
+
+            // Date Normali
+            val dateStr = item.date.toString()
             val isSelected = selectedDates.contains(dateStr)
 
             if (isSelected) {

@@ -18,29 +18,46 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
 
     var periodDuration: Int = 4
     var cycleLength: Int = 28
-    var lastPeriodDate: String = getCurrentDate()
+    // Inizializziamo a null. Se l'utente non sceglie, resta null.
+    var lastPeriodDate: String? = null
 
-    fun saveData() {
+    // Funzione modificata: accetta un booleano per sapere se abbiamo saltato
+    fun saveData(isSkipped: Boolean) {
         viewModelScope.launch {
-            // 1. Salva dati generali
+            // Se è skipped, forziamo null, altrimenti usiamo il valore (o oggi se null per errore)
+            val dateToSave = if (isSkipped) null else (lastPeriodDate ?: getCurrentDate())
+
+            // 1. Salva dati utente (con data NULL se skipped)
             val user = UserCycleData(
                 periodDuration = periodDuration,
                 cycleLength = cycleLength,
-                lastPeriodDate = lastPeriodDate
+                lastPeriodDate = dateToSave
             )
             dao.insertOrUpdate(user)
 
-            // 2. Popola la tabella period_days in base ai dati inseriti
-            try {
-                val startDate = LocalDate.parse(lastPeriodDate)
-                for (i in 0 until periodDuration) {
-                    val dateToAdd = startDate.plusDays(i.toLong())
-                    dao.insertPeriodDay(PeriodDay(dateToAdd.toString()))
+            // 2. IMPORTANTE: Genera i giorni in period_days SOLO se NON abbiamo saltato
+            if (!isSkipped && dateToSave != null) {
+                try {
+                    val startDate = LocalDate.parse(dateToSave)
+                    for (i in 0 until periodDuration) {
+                        val dateToAdd = startDate.plusDays(i.toLong())
+                        dao.insertPeriodDay(PeriodDay(dateToAdd.toString()))
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            } else {
+                // Se abbiamo saltato, assicuriamoci che la tabella period_days sia VUOTA
+                // per evitare "fantasmi" di vecchie installazioni
+                val allDays = dao.getAllPeriodDays()
+                allDays.forEach { dao.deletePeriodDay(it) }
             }
         }
+    }
+
+    // Helper per settare la data di oggi quando si apre il DatePicker
+    fun setDateToToday() {
+        lastPeriodDate = getCurrentDate()
     }
 
     private fun getCurrentDate(): String {

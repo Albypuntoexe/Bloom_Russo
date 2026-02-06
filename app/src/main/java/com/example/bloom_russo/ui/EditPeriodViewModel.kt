@@ -23,32 +23,13 @@ class EditPeriodViewModel(application: Application) : AndroidViewModel(applicati
     private val _selectedDates = mutableSetOf<String>()
     val selectedDatesLiveData = MutableLiveData<Set<String>>()
 
-    // Per la logica del Range (click 6 poi 9)
     private var lastToggledDate: LocalDate? = null
 
     init {
         viewModelScope.launch {
-            // 1. Carica i giorni esistenti dal DB ("period_days")
+            // 1. CARICA SOLO QUELLO CHE C'È NEL DB. Niente magie.
             val savedDays = dao.getAllPeriodDays()
-
-            if (savedDays.isNotEmpty()) {
-                // Caso A: Abbiamo già usato l'Edit in passato
-                savedDays.forEach { _selectedDates.add(it.date) }
-            } else {
-                // Caso B (Richiesta 2): Mai usato Edit, ma abbiamo dati Onboarding.
-                // Pre-selezioniamo i giorni basandoci sull'ultimo ciclo noto.
-                val user = dao.getUserDataSync()
-                if (user != null && !user.lastPeriodDate.isNullOrEmpty()) {
-                    try {
-                        val startDate = LocalDate.parse(user.lastPeriodDate)
-                        val duration = user.periodDuration
-                        for (i in 0 until duration) {
-                            val dateToAdd = startDate.plusDays(i.toLong())
-                            _selectedDates.add(dateToAdd.toString())
-                        }
-                    } catch (e: Exception) { e.printStackTrace() }
-                }
-            }
+            savedDays.forEach { _selectedDates.add(it.date) }
 
             selectedDatesLiveData.postValue(_selectedDates)
             generateCalendarGrid()
@@ -56,51 +37,47 @@ class EditPeriodViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun toggleDate(date: LocalDate) {
+        // Impedisci modifica date future
+        if (date.isAfter(LocalDate.now())) return
+
         val dateStr = date.toString()
 
-        // LOGICA RANGE (Richiesta 3)
-        // Se abbiamo cliccato una data poco fa e clicchiamo un'altra vicina...
+        // Logica Range (riempie i buchi se clicchi due date vicine)
         if (lastToggledDate != null) {
             val prevDate = lastToggledDate!!
-            val daysDiff = ChronoUnit.DAYS.between(prevDate, date)
-            val absDiff = abs(daysDiff)
-
-            // Se la distanza è tra 1 e 9 giorni, riempiamo il buco
-            if (absDiff > 1 && absDiff < 10) {
+            val daysDiff = abs(ChronoUnit.DAYS.between(prevDate, date))
+            // Se la distanza è tra 2 e 20 giorni, riempiamo il buco
+            if (daysDiff > 1 && daysDiff < 20) {
                 val startDate = if (date.isAfter(prevDate)) prevDate else date
-
-                // Riempiamo i giorni in mezzo
-                for (i in 1 until absDiff) {
-                    val dateInBetween = startDate.plusDays(i)
-                    _selectedDates.add(dateInBetween.toString())
+                for (i in 1 until daysDiff) {
+                    val intermediate = startDate.plusDays(i)
+                    if (!intermediate.isAfter(LocalDate.now())) {
+                        _selectedDates.add(intermediate.toString())
+                    }
                 }
             }
         }
 
-        // Logica Standard Toggle
         if (_selectedDates.contains(dateStr)) {
             _selectedDates.remove(dateStr)
-            lastToggledDate = null // Se deselezioniamo, resettiamo la logica range
+            lastToggledDate = null
         } else {
             _selectedDates.add(dateStr)
-            lastToggledDate = date // Salviamo questa come ultima data cliccata
+            lastToggledDate = date
         }
-
         selectedDatesLiveData.value = _selectedDates
     }
 
     fun saveChanges(onComplete: () -> Unit) {
         viewModelScope.launch {
-            // 1. Pulisci tutto e riscrivi (metodo sicuro per evitare conflitti)
+            // 1. Cancella tutto il vecchio DB
             val oldList = dao.getAllPeriodDays()
             oldList.forEach { dao.deletePeriodDay(it) }
 
-            // 2. Inserisci i nuovi
-            _selectedDates.forEach { dateStr ->
-                dao.insertPeriodDay(PeriodDay(dateStr))
-            }
+            // 2. Scrivi esattamente quello che l'utente ha selezionato
+            _selectedDates.forEach { dao.insertPeriodDay(PeriodDay(it)) }
 
-            // 3. Aggiorna UserCycleData.lastPeriodDate per la Home
+            // 3. Aggiorna la data "Ultimo Ciclo" per la Home
             updateLastPeriodDate()
 
             onComplete()
@@ -108,34 +85,42 @@ class EditPeriodViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     private suspend fun updateLastPeriodDate() {
-        if (_selectedDates.isEmpty()) return
+        val user = dao.getUserDataSync() ?: return
 
-        // Troviamo la data più recente inserita
-        val maxDateStr = _selectedDates.maxOrNull() ?: return
-
-        val user = dao.getUserDataSync()
-        if (user != null) {
-            // Troviamo l'INIZIO di quell'ultimo ciclo.
-            // (Se ho selezionato 10,11,12,13... la data max è 13, ma l'inizio è 10)
-            // Cerchiamo a ritroso dalla data massima finché troviamo date consecutive
-            var currentCheck = LocalDate.parse(maxDateStr)
-            var potentialStartDate = currentCheck
-
-            while (_selectedDates.contains(currentCheck.minusDays(1).toString())) {
-                currentCheck = currentCheck.minusDays(1)
-                potentialStartDate = currentCheck
-            }
-
-            user.lastPeriodDate = potentialStartDate.toString()
+        // SE L'UTENTE HA CANCELLATO TUTTO:
+        // Impostiamo lastPeriodDate a NULL. Così la Home saprà che non ci sono cicli attivi.
+        if (_selectedDates.isEmpty()) {
+            user.lastPeriodDate = null
             dao.insertOrUpdate(user)
+            return
         }
+
+        // Altrimenti, troviamo l'inizio del blocco più recente
+        val sortedDates = _selectedDates.map { LocalDate.parse(it) }.sortedDescending()
+
+        val mostRecentBlock = mutableListOf<LocalDate>()
+        if (sortedDates.isNotEmpty()) {
+            mostRecentBlock.add(sortedDates[0])
+            for (i in 0 until sortedDates.size - 1) {
+                val current = sortedDates[i]
+                val next = sortedDates[i+1]
+                // Se c'è un buco > 1 giorno, stop
+                if (ChronoUnit.DAYS.between(next, current) > 1) break
+                mostRecentBlock.add(next)
+            }
+        }
+
+        val newStartDate = mostRecentBlock.minOrNull() ?: return
+
+        user.lastPeriodDate = newStartDate.toString()
+        dao.insertOrUpdate(user)
     }
 
     private fun generateCalendarGrid() {
-        // ... (Codice identico a prima per la griglia) ...
         val items = mutableListOf<CalendarItem>()
-        val startMonth = YearMonth.now().minusMonths(3)
-        val endMonth = YearMonth.now().plusMonths(1)
+        // Mostra 12 mesi indietro
+        val startMonth = YearMonth.now().minusMonths(12)
+        val endMonth = YearMonth.now()
 
         var currentMonth = startMonth
         while (!currentMonth.isAfter(endMonth)) {
@@ -143,11 +128,8 @@ class EditPeriodViewModel(application: Application) : AndroidViewModel(applicati
             val firstDayOfWeek = currentMonth.atDay(1).dayOfWeek.value
             val emptySlots = if (firstDayOfWeek == 7) 0 else firstDayOfWeek
             for (i in 0 until emptySlots) items.add(CalendarItem.Day(null, DayStatus.NONE))
-
             val daysInMonth = currentMonth.lengthOfMonth()
-            for (day in 1..daysInMonth) {
-                items.add(CalendarItem.Day(currentMonth.atDay(day), DayStatus.NONE))
-            }
+            for (day in 1..daysInMonth) items.add(CalendarItem.Day(currentMonth.atDay(day), DayStatus.NONE))
             currentMonth = currentMonth.plusMonths(1)
         }
         calendarItems.postValue(items)

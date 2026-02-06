@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -20,19 +19,23 @@ class HomeFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         val binding = FragmentHomeBinding.inflate(inflater, container, false)
-
-        // Collega il ViewModel al Layout
         binding.viewModel = viewModel
         binding.lifecycleOwner = viewLifecycleOwner
 
-        // Attiviamo l'osservatore dei dati
-        viewModel.dataObserver.observe(viewLifecycleOwner) {
-            // UI si aggiorna via DataBinding
+        // Observer per i dati (attiva il calcolo iniziale)
+        viewModel.dataObserver.observe(viewLifecycleOwner) {}
+
+        // Listener Click Bottone
+        binding.actionButton.setOnClickListener {
+            viewModel.onActionButtonClick()
         }
 
-        binding.actionButton.setOnClickListener {
-            // Ora l'ID action_home_to_edit esiste grazie al file nav_graph sopra
-            findNavController().navigate(R.id.action_home_to_edit)
+        // Navigazione controllata dal ViewModel
+        viewModel.navigateToEdit.observe(viewLifecycleOwner) { shouldNavigate ->
+            if (shouldNavigate) {
+                findNavController().navigate(R.id.action_home_to_edit)
+                viewModel.onNavigationComplete()
+            }
         }
 
         return binding.root

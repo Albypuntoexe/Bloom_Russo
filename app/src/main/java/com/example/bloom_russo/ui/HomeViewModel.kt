@@ -5,8 +5,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import com.example.bloom_russo.data.AppDatabase
+import com.example.bloom_russo.data.PeriodDay
 import com.example.bloom_russo.data.UserCycleData
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -20,17 +23,35 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val mainTitle = MutableLiveData<String>("Loading...")
     val subTitle = MutableLiveData<String>("")
     val buttonText = MutableLiveData<String>("")
-    val isPeriodActive = MutableLiveData<Boolean>(false)
-
+    val navigateToEdit = MutableLiveData<Boolean>(false)
     val dataObserver = MediatorLiveData<UserCycleData?>()
 
     init {
         dataObserver.addSource(userData) { user ->
+            if (user != null) calculateCycleStatus(user)
+        }
+    }
+
+    fun onActionButtonClick() {
+        if (buttonText.value == "Period Starts") {
+            logPeriodStartToday()
+        } else {
+            navigateToEdit.value = true
+        }
+    }
+
+    fun onNavigationComplete() { navigateToEdit.value = false }
+
+    private fun logPeriodStartToday() {
+        viewModelScope.launch {
+            val todayStr = LocalDate.now().toString()
+            // Inserisci oggi
+            dao.insertPeriodDay(PeriodDay(todayStr))
+            // Aggiorna utente
+            val user = dao.getUserDataSync()
             if (user != null) {
-                calculateCycleStatus(user)
-            } else {
-                // Gestione caso utente nullo (es. primo avvio assoluto prima di onboarding)
-                mainTitle.value = "Welcome"
+                user.lastPeriodDate = todayStr
+                dao.insertOrUpdate(user)
             }
         }
     }
@@ -39,37 +60,30 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         val today = LocalDate.now()
 
-        // FIX CRASH: Gestione sicura del parsing della data
-        val lastPeriodDate = try {
-            if (user.lastPeriodDate.isNullOrEmpty()) {
-                null
-            } else {
-                LocalDate.parse(user.lastPeriodDate, formatter)
-            }
-        } catch (e: Exception) {
-            // Se la data è corrotta, usiamo oggi per evitare crash
-            LocalDate.now()
+        // Se la data è nulla o vuota (es. hai cancellato tutto), resetta lo stato
+        val lastPeriodDate = if (user.lastPeriodDate.isNullOrEmpty()) {
+            null
+        } else {
+            try { LocalDate.parse(user.lastPeriodDate, formatter) } catch (e: Exception) { null }
         }
 
         if (lastPeriodDate == null) {
-            mainTitle.value = "Setup Required"
+            mainTitle.value = "Welcome"
+            subTitle.value = "Tap to track period"
+            buttonText.value = "Period Starts"
             return
         }
 
         val daysSinceStart = ChronoUnit.DAYS.between(lastPeriodDate, today).toInt()
 
-        // Logica visualizzazione
         if (daysSinceStart >= 0 && daysSinceStart < user.periodDuration) {
             val currentDay = daysSinceStart + 1
             mainTitle.value = "${ordinal(currentDay)} Day"
             subTitle.value = "Period Phase"
             buttonText.value = "Period Ends"
-            isPeriodActive.value = true
         } else {
-            isPeriodActive.value = false
             buttonText.value = "Period Starts"
 
-            // Calcolo prossimo ciclo
             val nextPeriodDate = lastPeriodDate.plusDays(user.cycleLength.toLong())
             val daysUntilNext = ChronoUnit.DAYS.between(today, nextPeriodDate).toInt()
             val nextDateStr = nextPeriodDate.format(DateTimeFormatter.ofPattern("MMM d"))
