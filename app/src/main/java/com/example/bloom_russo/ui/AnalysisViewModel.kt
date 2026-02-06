@@ -9,12 +9,17 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
-class MyCyclesViewModel(application: Application) : AndroidViewModel(application) {
+class AnalysisViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao = AppDatabase.getDatabase(application).userDao()
 
-    // Lista aggiornata al nuovo formato CycleHistoryItem
+    // Lista per l'Adapter
     val cyclesList = MutableLiveData<List<CycleHistoryItem>>()
+
+    // Medie per le Card
+    val averagePeriod = MutableLiveData<Int>(0)
+    val averageCycle = MutableLiveData<Int>(0)
+    val totalCycles = MutableLiveData<Int>(0)
 
     init {
         loadCycles()
@@ -30,11 +35,11 @@ class MyCyclesViewModel(application: Application) : AndroidViewModel(application
                 return@launch
             }
 
-            // 1. Ordina date
+            // Convertiamo stringhe in LocalDate
             val sortedDates = allDays.map { LocalDate.parse(it.date) }.sortedDescending()
             val cycleStarts = mutableListOf<LocalDate>()
 
-            // 2. Trova gli inizi dei cicli
+            // 1. Identifica date di inizio ciclo (buchi > 1 giorno)
             if (sortedDates.isNotEmpty()) {
                 cycleStarts.add(sortedDates[0])
                 for (i in 0 until sortedDates.size - 1) {
@@ -45,38 +50,54 @@ class MyCyclesViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
             }
-            // Ordine cronologico inverso (più recente in alto)
+            // Ordina dal più recente
             cycleStarts.sortDescending()
 
             val historyItems = mutableListOf<CycleHistoryItem>()
+            var totalPeriodDays = 0
+            var totalCycleDays = 0
+            var cycleCount = 0
 
             for (i in 0 until cycleStarts.size) {
                 val start = cycleStarts[i]
+                // Fine teorica basata sulla durata media (per la visualizzazione grafica)
+                val end = start.plusDays(userData.periodDuration.toLong() - 1)
 
-                // Durata stimata del flusso (per la barra rosa)
-                val periodLen = userData.periodDuration
-                val end = start.plusDays(periodLen.toLong() - 1)
-
-                // Calcolo lunghezza totale del ciclo (per la barra gialla)
+                // Calcola lunghezza ciclo rispetto al prossimo inizio
                 val nextStart = if (i > 0) cycleStarts[i - 1] else null
-
                 val cycleLen = if (nextStart != null) {
                     ChronoUnit.DAYS.between(start, nextStart).toInt()
                 } else {
-                    userData.cycleLength // Per l'ultimo ciclo (quello corrente), usa default
+                    userData.cycleLength // Default per l'ultimo
                 }
 
-                // FIX: Uso il costruttore corretto della nuova Data Class
+                // CREAZIONE OGGETTO CORRETTO
                 historyItems.add(CycleHistoryItem(
                     startDate = start,
                     endDate = end,
-                    periodDuration = periodLen,
+                    periodDuration = userData.periodDuration,
                     cycleLength = cycleLen,
-                    isCurrent = (i == 0) // Il primo è quello corrente
+                    isCurrent = (i == 0) // Il primo della lista è quello corrente
                 ))
+
+                if (nextStart != null) {
+                    totalPeriodDays += userData.periodDuration
+                    totalCycleDays += cycleLen
+                    cycleCount++
+                }
             }
 
             cyclesList.postValue(historyItems)
+
+            if (cycleCount > 0) {
+                averagePeriod.postValue(totalPeriodDays / cycleCount)
+                averageCycle.postValue(totalCycleDays / cycleCount)
+                totalCycles.postValue(cycleCount)
+            } else {
+                averagePeriod.postValue(userData.periodDuration)
+                averageCycle.postValue(userData.cycleLength)
+                totalCycles.postValue(historyItems.size)
+            }
         }
     }
 }

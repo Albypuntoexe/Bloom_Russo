@@ -18,16 +18,22 @@ class HomeFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        // Inizializza il Binding
         val binding = FragmentHomeBinding.inflate(inflater, container, false)
+
+        // Collega il ViewModel al layout XML
         binding.viewModel = viewModel
         binding.lifecycleOwner = viewLifecycleOwner
 
+        // Observer per i dati (attiva il calcolo iniziale)
         viewModel.dataObserver.observe(viewLifecycleOwner) {}
 
+        // Click Bottone Centrale
         binding.actionButton.setOnClickListener {
             viewModel.onActionButtonClick()
         }
 
+        // Navigazione verso Edit (controllata dal ViewModel)
         viewModel.navigateToEdit.observe(viewLifecycleOwner) { shouldNavigate ->
             if (shouldNavigate) {
                 findNavController().navigate(R.id.action_home_to_edit)
@@ -35,16 +41,17 @@ class HomeFragment : Fragment() {
             }
         }
 
-        // Click Campanella -> Reminders
+        // Click Campanella (Notifiche)
         binding.iconNotifications.setOnClickListener {
             findNavController().navigate(R.id.action_home_to_reminders)
         }
 
-        // Click Ingranaggio -> Settings
+        // Click Settings (Ingranaggio)
         binding.iconSettings.setOnClickListener {
             findNavController().navigate(R.id.action_home_to_settings)
         }
 
+        // IMPORTANTE: Restituisce la View radice, non un File!
         return binding.root
     }
 }

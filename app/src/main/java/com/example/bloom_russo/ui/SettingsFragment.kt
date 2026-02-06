@@ -8,7 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.NumberPicker // IMPORTANTE
+import android.widget.NumberPicker
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -22,6 +22,8 @@ import kotlinx.coroutines.launch
 class SettingsFragment : Fragment() {
 
     private lateinit var dao: com.example.bloom_russo.data.UserDao
+    private lateinit var tvPeriodLengthValue: TextView
+    private lateinit var tvCycleLengthValue: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -30,12 +32,15 @@ class SettingsFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_settings, container, false)
         dao = AppDatabase.getDatabase(requireContext()).userDao()
 
+        tvPeriodLengthValue = view.findViewById(R.id.tvPeriodLengthValue)
+        tvCycleLengthValue = view.findViewById(R.id.tvCycleLengthValue)
+
         view.findViewById<ImageView>(R.id.btnBack).setOnClickListener {
             findNavController().popBackStack()
         }
 
         view.findViewById<LinearLayout>(R.id.btnEditPeriodDuration).setOnClickListener {
-            showNumberPickerDialog("Period Duration", true)
+            showNumberPickerDialog("Period Length", true)
         }
 
         view.findViewById<LinearLayout>(R.id.btnEditCycleLength).setOnClickListener {
@@ -46,28 +51,37 @@ class SettingsFragment : Fragment() {
             showDeleteConfirmation()
         }
 
+        loadCurrentValues()
+
         return view
     }
+
+    private fun loadCurrentValues() {
+        lifecycleScope.launch {
+            val user = dao.getUserDataSync()
+            if (user != null) {
+                tvPeriodLengthValue.text = "${user.periodDuration} Days"
+                tvCycleLengthValue.text = "${user.cycleLength} Days"
+            }
+        }
+    }
+
+    // ... (rest of the code: showNumberPickerDialog, showDeleteConfirmation, performDelete - same as before) ...
 
     private fun showNumberPickerDialog(title: String, isPeriod: Boolean) {
         val builder = AlertDialog.Builder(requireContext())
         builder.setTitle(title)
 
-        // Creiamo il NumberPicker
         val numberPicker = NumberPicker(requireContext())
 
-        // Impostiamo range sensati
         if (isPeriod) {
             numberPicker.minValue = 1
             numberPicker.maxValue = 15
-            numberPicker.value = 5 // Default visuale
         } else {
             numberPicker.minValue = 15
             numberPicker.maxValue = 50
-            numberPicker.value = 28 // Default visuale
         }
 
-        // Recuperiamo il valore corrente dal DB per mostrarlo (opzionale ma carino)
         lifecycleScope.launch {
             val user = dao.getUserDataSync()
             if (user != null) {
@@ -76,7 +90,6 @@ class SettingsFragment : Fragment() {
             }
         }
 
-        // Aggiungiamo il picker al dialog
         builder.setView(numberPicker)
 
         builder.setPositiveButton("Save") { _, _ ->
@@ -87,7 +100,7 @@ class SettingsFragment : Fragment() {
                     if (isPeriod) user.periodDuration = value
                     else user.cycleLength = value
                     dao.insertOrUpdate(user)
-                    Toast.makeText(context, "Updated to $value days!", Toast.LENGTH_SHORT).show()
+                    loadCurrentValues() // Ricarica i valori a video
                 }
             }
         }

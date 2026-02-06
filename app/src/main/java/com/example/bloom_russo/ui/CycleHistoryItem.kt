@@ -1,9 +1,12 @@
 package com.example.bloom_russo.ui
 
-// Rappresenta una riga nella lista dello storico
+import java.time.LocalDate
+
+// Nuova definizione per supportare la UI avanzata
 data class CycleHistoryItem(
-    val startDate: String, // "Feb 6"
-    val endDate: String,   // "Feb 10"
-    val duration: Int,     // 5 days
-    val year: Int          // 2026 (per raggruppare se volessimo)
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    val periodDuration: Int, // Per la barra rosa
+    val cycleLength: Int,    // Per la barra gialla
+    val isCurrent: Boolean = false
 )
